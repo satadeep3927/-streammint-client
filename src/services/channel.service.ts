@@ -3,6 +3,7 @@ import { IEnumerable, from } from "linq-to-typescript";
 
 import BaseService from "./service";
 import ParticipantService from "./participant.service";
+import { PulseService } from "./pulse.service";
 
 /**
  * Service for managing channels in the system.
@@ -35,14 +36,22 @@ export default class ChannelService extends BaseService {
    */
   public channelID: string | null = null;
 
-  constructor(baseURL: string, secretID: string, secretKey: string) {
-    super(baseURL, secretID, secretKey);
+  public pulse: PulseService;
 
+  constructor(
+    baseURL: string,
+    secretID: string,
+    secretKey: string,
+    pulse: PulseService
+  ) {
+    super(baseURL, secretID, secretKey);
+    this.pulse = pulse;
     this.participants = new ParticipantService(
       baseURL,
       secretID,
       secretKey,
-      this
+      this,
+      pulse
     );
   }
 
@@ -88,7 +97,11 @@ export default class ChannelService extends BaseService {
     const { data: response } = await this.post("/v1/project/channels", {
       data,
     });
-    return response.data as Channel;
+    const channel = response.data as Channel;
+    if (this.pulse) {
+      await this.pulse.emit("channel_create", channel);
+    }
+    return channel;
   }
 
   /**
@@ -104,7 +117,11 @@ export default class ChannelService extends BaseService {
     const { data: response } = await this.put(`/v1/project/channels/${id}`, {
       data,
     });
-    return response.data as Channel;
+    const channel = response.data as Channel;
+    if (this.pulse) {
+      await this.pulse.emit("channel_update", channel);
+    }
+    return channel;
   }
 
   /**
@@ -114,6 +131,9 @@ export default class ChannelService extends BaseService {
    */
   public async deleteChannel(id: string): Promise<void> {
     await this.delete(`/v1/project/channels/${id}`);
+    if (this.pulse) {
+      await this.pulse.emit("channel_delete", { id });
+    }
   }
   /**
    * Connect to Specific Channel

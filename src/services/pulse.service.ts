@@ -1,6 +1,7 @@
 import { PulseEventFN, PulseEventListener } from "../types/pulse.type";
 
 import BaseService from "./service";
+import { StreamEvent } from "../types/events.type";
 import { getWebSocketFromHttpUrl } from "../lib/utils";
 import { v7 as uuid } from "uuid";
 
@@ -29,6 +30,16 @@ export class PulseService extends BaseService {
   private listeners: Set<PulseEventListener> = new Set();
   private ws: WebSocket | null = null;
   private connectionPromise: Promise<void> | null = null;
+
+  /**
+   * Type-safe event handler registration for known event types
+   */
+  public onEvent<T extends StreamEvent["type"]>(
+    eventType: T,
+    handler: (event: Extract<StreamEvent, { type: T }>) => void
+  ) {
+    this.on(eventType, (event) => handler(event as any));
+  }
 
   constructor(baseURL: string, secretID: string, secretKey: string) {
     super(baseURL, secretID, secretKey);
@@ -72,6 +83,7 @@ export class PulseService extends BaseService {
           const message = JSON.parse(event.data);
           if (message.sender_id === this.clientID) return;
 
+          // Emit to generic listeners
           this.listeners.forEach((listener) => {
             if (listener.event === message.event_type) {
               listener.fn(message);
@@ -106,7 +118,6 @@ export class PulseService extends BaseService {
     await this.ensureConnection();
 
     const payload = {
-      id: uuid(),
       event_type: event,
       data,
       sender_id: this.clientID,

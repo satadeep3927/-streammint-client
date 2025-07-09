@@ -2,8 +2,15 @@ import { CreateOrUpdateUserArgs, User } from "../types/user.type";
 import { IEnumerable, from } from "linq-to-typescript";
 
 import BaseService from "./service";
+import { PulseService } from "./pulse.service";
 
 export default class UserService extends BaseService {
+  private pulse: PulseService;
+
+  constructor(baseURL: string, secretID: string, secretKey: string, pulse: PulseService) {
+    super(baseURL, secretID, secretKey);
+    this.pulse = pulse;
+  }
   /**
    * Fetches the list of users from the project.
    * @returns {Promise<IEnumerable<User>>} A promise that resolves to an enumerable collection of User objects.
@@ -38,6 +45,9 @@ export default class UserService extends BaseService {
    */
   public async createUser(user: CreateOrUpdateUserArgs): Promise<User> {
     const { data } = await this.post("/v1/project/users", user);
+    if (this.pulse) {
+      await this.pulse.emit("user_create", data.data);
+    }
     return data.data;
   }
   /**
@@ -51,6 +61,9 @@ export default class UserService extends BaseService {
     user: CreateOrUpdateUserArgs
   ): Promise<User> {
     const { data } = await this.put(`/v1/project/users/${userID}`, user);
+    if (this.pulse) {
+      await this.pulse.emit("user_update", data.data);
+    }
     return data.data;
   }
 
@@ -61,5 +74,8 @@ export default class UserService extends BaseService {
    */
   public async deleteUser(userID: string): Promise<void> {
     await this.delete(`/v1/project/users/${userID}`);
+    if (this.pulse) {
+      await this.pulse.emit("user_delete", { id: userID });
+    }
   }
 }

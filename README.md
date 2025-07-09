@@ -97,12 +97,28 @@ const state = client.getConnectionState(); // 'disconnected' | 'connecting' | 'c
 // Disconnect
 client.disconnect();
 ```
-
 ### Real-time Events
 
 ```typescript
-// Send custom events
-client.sendEvent('custom-event', { key: 'value' });
+// ---
+// Custom Events (Universal)
+// ---
+
+// Listen for a custom event
+client.messageService.onCustomEvent("my_custom_event", (data) => {
+  console.log("Received custom event:", data);
+});
+
+// Emit a custom event
+await client.messageService.emitCustomEvent("my_custom_event", { foo: "bar" });
+
+// Or use the underlying pulse directly:
+client.messageService.pulse.on("my_custom_event", handler);
+await client.messageService.pulse.emit("my_custom_event", { ... });
+
+// ---
+// Standard events
+// ---
 
 // Send messages
 client.sendMessage('channel-id', 'Hello!');
@@ -118,6 +134,7 @@ client.onMessage((data) => {
   console.log(`Message in ${data.channel_id}: ${data.message}`);
 });
 
+```
 client.onTyping((data) => {
   console.log(`${data.sender_id} is ${data.is_typing ? 'typing' : 'not typing'}`);
 });

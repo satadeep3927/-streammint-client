@@ -3,6 +3,7 @@ import { IEnumerable, from } from "linq-to-typescript";
 import BaseService from "./service";
 import ChannelService from "./channel.service";
 import { Participant } from "../types/channel.type";
+import { PulseService } from "./pulse.service";
 
 /**
  * Service for managing participants in a channel.
@@ -33,16 +34,18 @@ export default class ParticipantService extends BaseService {
    * @type {ChannelService}
    */
   private channel: ChannelService;
+  private pulse: PulseService;
 
   constructor(
     baseURL: string,
     secretID: string,
     secretKey: string,
-    channelService: ChannelService
+    channelService: ChannelService,
+    pulse: PulseService
   ) {
     super(baseURL, secretID, secretKey);
-
     this.channel = channelService;
+    this.pulse = pulse;
   }
   /**
    * Get participants of a specific channel
@@ -79,6 +82,9 @@ export default class ParticipantService extends BaseService {
       `/v1/project/channels/${this.channel.channelID}/participants`,
       participant
     );
+    if (this.pulse) {
+      await this.pulse.emit("participant_create", participant);
+    }
   }
 
   /**
@@ -98,6 +104,11 @@ export default class ParticipantService extends BaseService {
         data: participantID,
       }
     );
+    if (this.pulse) {
+      for (const id of participantID) {
+        await this.pulse.emit("participant_delete", { id });
+      }
+    }
   }
 
   /**
@@ -116,5 +127,8 @@ export default class ParticipantService extends BaseService {
       `/v1/project/channels/${this.channel.channelID}/participants`,
       participant
     );
+    if (this.pulse) {
+      await this.pulse.emit("participant_update", participant);
+    }
   }
 }

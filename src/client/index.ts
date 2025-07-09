@@ -1,7 +1,9 @@
 import EventEmitter from "eventemitter3";
 import { FileService } from "../services/file.service";
+import { MessageService } from "../services/message.service";
 import { PulseService } from "../services/pulse.service";
 import { StreamClientOptions } from "../types/main";
+import { StreamEvent } from "../types/events.type";
 import UserService from "../services/user.service";
 
 export class StreamClient extends EventEmitter {
@@ -13,14 +15,10 @@ export class StreamClient extends EventEmitter {
   private secretKey: string;
   public users: UserService;
   public files: FileService;
+  public messages: MessageService;
   public pulse: PulseService;
   public isReady: boolean = false;
-  /**
-   * StreamClient is a WebSocket client for connecting to a streaming server.
-   * It extends the native WebSocket class to provide additional functionality.
-   *
-   * @param config - Configuration options for the StreamClient
-   */
+
   constructor({
     url,
     secretID = "",
@@ -36,19 +34,224 @@ export class StreamClient extends EventEmitter {
     this.autoConnect = autoConnect;
     this.secretID = secretID;
     this.secretKey = secretKey;
-    this.users = new UserService(this.url, this.secretID, this.secretKey);
-    this.files = new FileService(this.url, this.secretID, this.secretKey);
     this.pulse = new PulseService(this.url, this.secretID, this.secretKey);
+    this.users = new UserService(
+      this.url,
+      this.secretID,
+      this.secretKey,
+      this.pulse
+    );
+    this.files = new FileService(
+      this.url,
+      this.secretID,
+      this.secretKey,
+      this.pulse
+    );
 
-    /**
-     *  Initializes the StreamClient and connects to the WebSocket server.
-     *  If autoConnect is true, it will attempt to connect immediately.
-     *  If the connection fails, it will retry based on the reconnectInterval and maxReconnect
-     */
+    this.messages = new MessageService(
+      this.url,
+      this.secretID,
+      this.secretKey,
+      this.pulse
+    );
     this.connect();
   }
 
-  // Example method to demonstrate functionality
+  /**
+   * Disconnect from the real-time WebSocket
+   */
+  public disconnect(): void {
+    this.pulse.disconnect();
+    this.isReady = false;
+    this.emit("connection:close");
+  }
+
+  /**
+   * Returns true if the WebSocket is connected
+   */
+  public isConnected(): boolean {
+    return this.pulse.isConnected;
+  }
+
+  /**
+   * Returns the current connection state as a string
+   * ('connected' | 'disconnected')
+   */
+  public getConnectionState(): "connected" | "disconnected" {
+    return this.pulse.isConnected ? "connected" : "disconnected";
+  }
+
+  /**
+   * Send a typing indicator to a channel
+   */
+  public async sendTyping(channelId: string, isTyping: boolean): Promise<void> {
+    await this.pulse.emit("typing", { channelId, isTyping });
+  }
+
+  /**
+   * Send a presence update (e.g., 'online', 'away', 'offline')
+   */
+  public async sendPresence(status: string): Promise<void> {
+    await this.pulse.emit("presence", { status });
+  }
+
+  /**
+   * Listen for typing events
+   */
+  public onTyping(
+    handler: (data: {
+      channelId: string;
+      userId: string;
+      isTyping: boolean;
+    }) => void
+  ): void {
+    this.pulse.on("typing", (args) =>
+      handler(args as { channelId: string; userId: string; isTyping: boolean })
+    );
+  }
+
+  /**
+   * Listen for presence events
+   */
+  public onPresence(
+    handler: (data: { userId: string; status: string }) => void
+  ): void {
+    this.pulse.on("presence", (args) =>
+      handler(args as { userId: string; status: string })
+    );
+  }
+  /**
+   * Typed event: message_create
+   */
+  public onMessageCreate(
+    handler: (event: Extract<StreamEvent, { type: "message_create" }>) => void
+  ) {
+    this.pulse.onEvent("message_create", handler);
+  }
+
+  /**
+   * Typed event: message_update
+   */
+  public onMessageUpdate(
+    handler: (event: Extract<StreamEvent, { type: "message_update" }>) => void
+  ) {
+    this.pulse.onEvent("message_update", handler);
+  }
+
+  /**
+   * Typed event: message_delete
+   */
+  public onMessageDelete(
+    handler: (event: Extract<StreamEvent, { type: "message_delete" }>) => void
+  ) {
+    this.pulse.onEvent("message_delete", handler);
+  }
+
+  /**
+   * Typed event: participant_create
+   */
+  public onParticipantCreate(
+    handler: (
+      event: Extract<StreamEvent, { type: "participant_create" }>
+    ) => void
+  ) {
+    this.pulse.onEvent("participant_create", handler);
+  }
+
+  /**
+   * Typed event: participant_update
+   */
+  public onParticipantUpdate(
+    handler: (
+      event: Extract<StreamEvent, { type: "participant_update" }>
+    ) => void
+  ) {
+    this.pulse.onEvent("participant_update", handler);
+  }
+
+  /**
+   * Typed event: participant_delete
+   */
+  public onParticipantDelete(
+    handler: (
+      event: Extract<StreamEvent, { type: "participant_delete" }>
+    ) => void
+  ) {
+    this.pulse.onEvent("participant_delete", handler);
+  }
+
+  /**
+   * Typed event: channel_create
+   */
+  public onChannelCreate(
+    handler: (event: Extract<StreamEvent, { type: "channel_create" }>) => void
+  ) {
+    this.pulse.onEvent("channel_create", handler);
+  }
+
+  /**
+   * Typed event: channel_update
+   */
+  public onChannelUpdate(
+    handler: (event: Extract<StreamEvent, { type: "channel_update" }>) => void
+  ) {
+    this.pulse.onEvent("channel_update", handler);
+  }
+
+  /**
+   * Typed event: channel_delete
+   */
+  public onChannelDelete(
+    handler: (event: Extract<StreamEvent, { type: "channel_delete" }>) => void
+  ) {
+    this.pulse.onEvent("channel_delete", handler);
+  }
+
+  /**
+   * Typed event: user_create
+   */
+  public onUserCreate(
+    handler: (event: Extract<StreamEvent, { type: "user_create" }>) => void
+  ) {
+    this.pulse.onEvent("user_create", handler);
+  }
+
+  /**
+   * Typed event: user_update
+   */
+  public onUserUpdate(
+    handler: (event: Extract<StreamEvent, { type: "user_update" }>) => void
+  ) {
+    this.pulse.onEvent("user_update", handler);
+  }
+
+  /**
+   * Typed event: user_delete
+   */
+  public onUserDelete(
+    handler: (event: Extract<StreamEvent, { type: "user_delete" }>) => void
+  ) {
+    this.pulse.onEvent("user_delete", handler);
+  }
+
+  /**
+   * Typed event: file_upload
+   */
+  public onFileUpload(
+    handler: (event: Extract<StreamEvent, { type: "file_upload" }>) => void
+  ) {
+    this.pulse.onEvent("file_upload", handler);
+  }
+
+  /**
+   * Typed event: file_delete
+   */
+  public onFileDelete(
+    handler: (event: Extract<StreamEvent, { type: "file_delete" }>) => void
+  ) {
+    this.pulse.onEvent("file_delete", handler);
+  }
+
   private async connect() {
     try {
       await this.pulse.connect();
