@@ -110,7 +110,7 @@ export class ProjectService extends BaseService {
    * @returns Promise resolving to the created token
    */
   public async createToken(projectId: string, data: TokenData): Promise<ProjectToken> {
-    const response = await this.post(`/v1/project/${projectId}/token`, data);
+    const response = await this.post(`/v1/project/${projectId}/tokens`, data);
     return response.data.data;
   }
 
@@ -120,7 +120,7 @@ export class ProjectService extends BaseService {
    * @returns Promise resolving to array of tokens
    */
   public async getTokens(projectId: string): Promise<IEnumerable<ProjectToken>> {
-    const response = await this.get(`/v1/project/${projectId}/token`);
+    const response = await this.get(`/v1/project/${projectId}/tokens`);
     return from(response.data.data);
   }
 
@@ -131,6 +131,6 @@ export class ProjectService extends BaseService {
    * @returns Promise resolving when token is deleted
    */
   public async deleteToken(projectId: string, tokenId: string): Promise<void> {
-    await this.delete(`/v1/project/${projectId}/token/${tokenId}`);
+    await this.delete(`/v1/project/${projectId}/tokens/${tokenId}`);
   }
 }
