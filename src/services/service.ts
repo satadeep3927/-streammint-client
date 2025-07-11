@@ -25,13 +25,13 @@ export default class BaseService {
     // Add a request interceptor to include the JWT token in the headers
     this.client.interceptors.request.use(
       async (config) => {
-        const token = await this.generateToken(this.secretID, this.secretkey);
-        config.headers.Authorization = `Bearer ${token}`;
+        if (!config.headers.Authorization) {
+          const token = this.generateToken(this.secretID, this.secretkey);
+          config.headers.Authorization = `Bearer ${token}`;
+        }
         return config;
       },
-      (error) => {
-        return Promise.reject(error);
-      }
+      (error) => Promise.reject(error)
     );
   }
 
