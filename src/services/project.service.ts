@@ -17,7 +17,7 @@ export interface ProjectData {
 export interface TokenData {
   name: string;
   extra?: Record<string, any>;
-  expires: null | string; // ISO date string or null for no expiry
+  expires_at: null | string; // ISO date string or null for no expiry
 }
 
 /**
