@@ -5,6 +5,24 @@ import BaseService from "./service";
 import { PulseService } from "./pulse.service";
 
 /**
+ * Pagination options for getting messages before/after a specific time
+ */
+export interface MessagePaginationOptions {
+  /** The datetime to use as a reference point (ISO string or Date) */
+  datetime?: string | Date;
+  /** Maximum number of messages to return (default: 100) */
+  limit?: number;
+}
+
+/**
+ * Search options for searching messages in a channel
+ */
+export interface MessageSearchOptions {
+  /** The search query string */
+  query: string;
+}
+
+/**
  * MessageService provides CRUD operations for messages and emits real-time events via PulseService.
  * 
  * Standard events: "message_create", "message_update", "message_delete".
@@ -68,10 +86,71 @@ export class MessageService extends BaseService {
   }
 
   /**
+   * Get messages after a specific datetime (for pagination)
+   * @param channelId - The channel ID
+   * @param options - Pagination options
+   */
+  public async getMessagesAfter(channelId: string, options: MessagePaginationOptions = {}): Promise<IEnumerable<Message>> {
+    const params = new URLSearchParams();
+    
+    if (options.datetime) {
+      const datetime = options.datetime instanceof Date ? options.datetime.toISOString() : options.datetime;
+      params.append('datetime', datetime);
+    }
+    
+    if (options.limit !== undefined) {
+      params.append('limit', options.limit.toString());
+    }
+
+    const queryString = params.toString();
+    const url = `/v1/project/messages/${channelId}/after${queryString ? `?${queryString}` : ''}`;
+    
+    const { data } = await this.get(url);
+    return from(data.data);
+  }
+
+  /**
+   * Get messages before a specific datetime (for pagination)
+   * @param channelId - The channel ID
+   * @param options - Pagination options
+   */
+  public async getMessagesBefore(channelId: string, options: MessagePaginationOptions = {}): Promise<IEnumerable<Message>> {
+    const params = new URLSearchParams();
+    
+    if (options.datetime) {
+      const datetime = options.datetime instanceof Date ? options.datetime.toISOString() : options.datetime;
+      params.append('datetime', datetime);
+    }
+    
+    if (options.limit !== undefined) {
+      params.append('limit', options.limit.toString());
+    }
+
+    const queryString = params.toString();
+    const url = `/v1/project/messages/${channelId}/before${queryString ? `?${queryString}` : ''}`;
+    
+    const { data } = await this.get(url);
+    return from(data.data);
+  }
+
+  /**
+   * Search messages in a channel
+   * @param channelId - The channel ID
+   * @param options - Search options
+   */
+  public async searchMessages(channelId: string, options: MessageSearchOptions): Promise<IEnumerable<Message>> {
+    const params = new URLSearchParams();
+    params.append('query', options.query);
+    
+    const { data } = await this.get(`/v1/project/messages/${channelId}/search?${params.toString()}`);
+    return from(data.data);
+  }
+
+  /**
    * Create a new message
    */
   public async createMessage(args: CreateMessageArgs): Promise<Message> {
-    const { data } = await this.post(`/v1/project/messages`, args);
+    const { data } = await this.post(`/v1/project/messages/${args.channelId}`, args);
     if (this.pulse) {
       await this.pulse.emit("message_create", data.data);
     }
@@ -93,11 +172,13 @@ export class MessageService extends BaseService {
 
   /**
    * Delete a message
+   * @param channelId - The channel ID the message belongs to
+   * @param messageId - The message ID to delete
    */
-  public async deleteMessage(id: string): Promise<void> {
-    await this.delete(`/v1/project/messages/${id}`);
+  public async deleteMessage(channelId: string, messageId: string): Promise<void> {
+    await this.delete(`/v1/project/messages/${channelId}/${messageId}`);
     if (this.pulse) {
-      await this.pulse.emit("message_delete", { id });
+      await this.pulse.emit("message_delete", { id: messageId, channelId });
     }
   }
 }

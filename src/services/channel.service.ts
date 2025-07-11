@@ -94,9 +94,7 @@ export default class ChannelService extends BaseService {
    * @returns Promise resolving to the created channel object
    */
   public async createChannel(data: CraeteChannelArgs): Promise<Channel> {
-    const { data: response } = await this.post("/v1/project/channels", {
-      data,
-    });
+    const { data: response } = await this.post("/v1/project/channels", data);
     const channel = response.data as Channel;
     if (this.pulse) {
       await this.pulse.emit("channel_create", channel);
@@ -114,9 +112,7 @@ export default class ChannelService extends BaseService {
     id: string,
     data: Partial<CraeteChannelArgs>
   ): Promise<Channel> {
-    const { data: response } = await this.put(`/v1/project/channels/${id}`, {
-      data,
-    });
+    const { data: response } = await this.put(`/v1/project/channels/${id}`, data);
     const channel = response.data as Channel;
     if (this.pulse) {
       await this.pulse.emit("channel_update", channel);

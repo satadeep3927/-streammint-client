@@ -1,17 +1,18 @@
-# StreamMint TypeScript Client
+# StreamMint Client
 
-A TypeScript client library for connecting to StreamMint chat server with real-time WebSocket support.
+A comprehensive TypeScript client library for StreamMint Server, providing real-time messaging, file management, user management, and WebSocket-based event streaming.
 
 ## Features
 
-- 🔐 JWT Authentication
-- 🚀 Real-time WebSocket communication
-- 📡 Event forwarding system
-- 🎯 TypeScript support with full type safety
-- 🌐 Browser and Node.js compatible
-- 📦 ESM and CommonJS support
-- ⚡ Automatic reconnection with exponential backoff
-- 🛡️ Comprehensive error handling
+- 🚀 **Real-time messaging** with WebSocket support
+- 👥 **User management** (CRUD operations)
+- 📁 **File uploads** with support for Browser File API and React Native
+- 🏢 **Channel management** with participant support
+- 🔐 **Authentication** for organizations and projects
+- 🎯 **Type-safe** with full TypeScript support
+- 📡 **Event streaming** with PulseService
+- 🔄 **Auto-reconnection** and error handling
+- 🌐 **Cross-platform** (Browser, Node.js, React Native)
 
 ## Installation
 
@@ -22,215 +23,294 @@ npm install @streammint/client
 ## Quick Start
 
 ```typescript
-import { StreamMintClient } from '@streammint/client';
+import { StreamClient } from '@streammint/client';
 
-const client = new StreamMintClient({
-  baseUrl: 'http://localhost:3000',
-  wsUrl: 'ws://localhost:3000', // Optional, defaults to baseUrl with ws protocol
+// Initialize the client
+const client = new StreamClient({
+  url: 'http://your-streammint-server.com',
+  secretID: 'your-secret-id',
+  secretKey: 'your-secret-key',
+  autoConnect: true
 });
 
-// Authentication
-await client.login({
-  email: 'user@example.com',
-  password: 'password123'
+// Listen for connection events
+client.on('ready', () => {
+  console.log('Connected to StreamMint!');
 });
 
-// Connect to WebSocket
-client.connect();
-
-// Listen for messages
-client.onMessage((data) => {
-  console.log('New message:', data.message);
-});
-
-// Send a message
-client.sendMessage('channel-id', 'Hello, World!');
+// Access services
+const users = await client.users.getUsers();
+console.log('Users:', users.toArray());
 ```
 
-## API Reference
+## Services Overview
 
-### Client Configuration
-
-```typescript
-interface ClientConfig {
-  baseUrl: string;          // HTTP API base URL
-  wsUrl?: string;          // WebSocket URL (optional)
-  timeout?: number;        // Request timeout in ms (default: 10000)
-  retryAttempts?: number;  // WebSocket retry attempts (default: 5)
-  retryDelay?: number;     // Initial retry delay in ms (default: 1000)
-}
-```
-
-### Authentication Methods
+### 🔐 Authentication Service
 
 ```typescript
-// Register new organization
-await client.register({
-  name: 'My Organization',
-  email: 'admin@myorg.com',
-  password: 'securePassword'
+import { AuthService } from '@streammint/client';
+
+const auth = new AuthService('http://your-server.com');
+
+// Register organization
+const org = await auth.registerOrganization({
+  name: 'My Company',
+  email: 'admin@company.com',
+  password: 'secure-password'
 });
 
 // Login
-const response = await client.login({
-  email: 'admin@myorg.com',
-  password: 'securePassword'
+const loginResult = await auth.loginOrganization({
+  email: 'admin@company.com',
+  password: 'secure-password'
 });
-
-// Get user profile
-const profile = await client.getProfile();
-
-// Logout
-client.logout();
 ```
 
-### WebSocket Connection
+### 📊 Project Service
 
 ```typescript
-// Connect (requires authentication first)
-client.connect();
+import { ProjectService } from '@streammint/client';
 
-// Check connection state
-const isConnected = client.isConnected();
-const state = client.getConnectionState(); // 'disconnected' | 'connecting' | 'connected' | 'reconnecting' | 'error'
+const projects = new ProjectService('http://your-server.com', 'jwt-token');
 
-// Disconnect
-client.disconnect();
+// Create project
+const project = await projects.createProject({
+  name: 'My Project',
+  description: 'A sample project'
+});
+
+// Create API tokens
+const token = await projects.createToken(project.id, {
+  name: 'API Token'
+});
 ```
-### Real-time Events
+
+### 👥 User Management
 
 ```typescript
-// ---
-// Custom Events (Universal)
-// ---
+// Get all users
+const users = await client.users.getUsers();
 
-// Listen for a custom event
-client.messageService.onCustomEvent("my_custom_event", (data) => {
-  console.log("Received custom event:", data);
+// Create a user
+const newUser = await client.users.createUser({
+  name: 'John Doe',
+  external_id: 'john.doe@company.com',
+  extra: { role: 'admin' }
 });
 
-// Emit a custom event
-await client.messageService.emitCustomEvent("my_custom_event", { foo: "bar" });
-
-// Or use the underlying pulse directly:
-client.messageService.pulse.on("my_custom_event", handler);
-await client.messageService.pulse.emit("my_custom_event", { ... });
-
-// ---
-// Standard events
-// ---
-
-// Send messages
-client.sendMessage('channel-id', 'Hello!');
-
-// Send typing indicators
-client.sendTyping('channel-id', true);
-
-// Send presence updates
-client.sendPresence('online');
-
-// Listen for specific events
-client.onMessage((data) => {
-  console.log(`Message in ${data.channel_id}: ${data.message}`);
-});
-
-```
-client.onTyping((data) => {
-  console.log(`${data.sender_id} is ${data.is_typing ? 'typing' : 'not typing'}`);
-});
-
-client.onPresence((data) => {
-  console.log(`${data.sender_id} is now ${data.status}`);
-});
-
-// Listen for raw events
-client.on('pulse:event', (event) => {
-  console.log('Received event:', event);
-});
+// Get user by ID
+const user = await client.users.getUserByID('user-id');
 ```
 
-### Event Handling
+### 💬 Messaging
 
 ```typescript
-// Connection events
-client.on('connection:state', (state) => console.log('State:', state));
-client.on('connection:open', () => console.log('Connected'));
-client.on('connection:close', (code, reason) => console.log('Disconnected'));
-client.on('connection:error', (error) => console.error('Connection error:', error));
+// Get messages for a channel
+const messages = await client.messages.getMessages('channel-id');
 
-// Authentication events
-client.on('auth:login', (data) => console.log('Logged in:', data));
-client.on('auth:logout', () => console.log('Logged out'));
-client.on('auth:error', (error) => console.error('Auth error:', error));
+// Create a message
+const message = await client.messages.createMessage({
+  content: 'Hello, World!',
+  userId: 'user-id',
+  channelId: 'channel-id'
+});
 
-// Real-time events
-client.on('pulse:event', (event) => console.log('Event:', event));
-client.on('pulse:error', (error) => console.error('Event error:', error));
+// Search messages
+const searchResults = await client.messages.searchMessages('channel-id', {
+  query: 'hello'
+});
+
+// Pagination
+const recentMessages = await client.messages.getMessagesAfter('channel-id', {
+  datetime: '2023-01-01T00:00:00Z',
+  limit: 50
+});
 ```
 
-## Development
+### 🏢 Channel Management
 
-### Setup
+```typescript
+// Get all channels
+const channels = await client.channels.getChannels();
 
-```bash
-# Install dependencies
-npm install
+// Create a channel
+const channel = await client.channels.createChannel({
+  name: 'General',
+  extra: { description: 'General discussion' }
+});
 
-# Build the library
-npm run build
+// Connect to a channel for participant operations
+await client.channels.connect('channel-id');
 
-# Watch mode for development
-npm run dev
-
-# Run tests
-npm run test
-
-# Run tests in watch mode
-npm run test:watch
-
-# Run tests with UI
-npm run test:ui
-
-# Generate coverage report
-npm run test:coverage
-
-# Lint code
-npm run lint
-
-# Fix linting issues
-npm run lint:fix
-
-# Type check
-npm run type-check
+// Add participants
+await client.channels.participants.addParticipants([
+  { user_id: 'user-1', extra: { role: 'admin' } },
+  { user_id: 'user-2', extra: { role: 'member' } }
+]);
 ```
 
-### Project Structure
+### 📁 File Management
 
+```typescript
+// Upload files
+const uploadedFile = await client.files.uploadFile([
+  { file: fileObject, name: 'document.pdf' }
+], { category: 'documents' });
+
+// Get all files
+const files = await client.files.getFiles();
+
+// Upload to specific channel
+const channelFile = await client.files.uploadChannelFile('channel-id', [
+  { file: imageFile, name: 'screenshot.png' }
+]);
+
+// React Native support
+const rnFile = FileService.createFileLike(
+  'file:///path/to/file.jpg',
+  'image/jpeg',
+  'photo.jpg'
+);
 ```
-src/
-├── index.ts          # Main exports
-├── client.ts         # Main client class
-├── auth.ts          # Authentication service
-├── websocket.ts     # WebSocket manager
-├── types.ts         # TypeScript interfaces
-└── test/
-    └── setup.ts     # Test setup and mocks
+
+### 📡 Real-time Events (PulseService)
+
+```typescript
+// Listen for real-time events
+client.pulse.on('message_create', (message) => {
+  console.log('New message:', message);
+});
+
+client.pulse.on('user_update', (user) => {
+  console.log('User updated:', user);
+});
+
+// Type-safe event handling
+client.pulse.onEvent('message_create', (event) => {
+  // event is fully typed
+  console.log('Message from:', event.data.user);
+});
+
+// Emit custom events
+await client.pulse.emit('custom_event', {
+  foo: 'bar',
+  timestamp: Date.now()
+});
+```
+
+## Configuration Options
+
+```typescript
+const client = new StreamClient({
+  url: 'http://your-server.com',
+  secretID: 'your-secret-id',
+  secretKey: 'your-secret-key',
+  reconnectInterval: 5000,        // Reconnection interval in ms
+  maxReconnectAttempts: 10,       // Max reconnection attempts
+  autoConnect: true               // Auto-connect on initialization
+});
+```
+
+## Error Handling
+
+```typescript
+try {
+  const users = await client.users.getUsers();
+} catch (error) {
+  console.error('API Error:', error);
+}
+
+// Global error handling
+client.on('error', (error) => {
+  console.error('Connection error:', error);
+});
+
+client.on('maxReconnectAttemptsReached', ({ error }) => {
+  console.error('Failed to reconnect:', error);
+});
+```
+
+## Type Definitions
+
+The library includes comprehensive TypeScript definitions:
+
+```typescript
+interface User {
+  id: string;
+  name: string;
+  external_id: string;
+  created_at: string;
+  extra: Record<string, any>;
+}
+
+interface Message {
+  id: string;
+  content: string;
+  user?: User;
+  channel?: Channel;
+  created_at: string;
+  extra?: Record<string, any>;
+}
+
+interface Channel {
+  id: string;
+  name: string;
+  participants?: Participant[];
+  created_at: string;
+  extra?: Record<string, any>;
+}
 ```
 
 ## Browser Support
 
-- Chrome/Chromium 88+
-- Firefox 85+
-- Safari 14+
-- Edge 88+
+- Chrome 60+
+- Firefox 55+
+- Safari 12+
+- Edge 79+
 
 ## Node.js Support
 
 - Node.js 16+
 
+## React Native Support
+
+Full support for React Native with file upload capabilities:
+
+```typescript
+import { FileService } from '@streammint/client';
+
+// Create file-like object for React Native
+const file = FileService.createFileLike(
+  imageUri,
+  'image/jpeg',
+  'photo.jpg'
+);
+
+await client.files.uploadSingleFile(file);
+```
+
+## Development
+
+```bash
+# Install dependencies
+npm install
+
+# Run tests
+npm test
+
+# Build
+npm run build
+
+# Type checking
+npm run type-check
+
+# Linting
+npm run lint
+```
+
 ## License
 
-MIT
+MIT License - see LICENSE file for details.
 
 ## Contributing
 
@@ -239,3 +319,7 @@ MIT
 3. Commit your changes (`git commit -m 'Add some amazing feature'`)
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
+
+## Support
+
+For support, email support@streammint.com or create an issue on GitHub.

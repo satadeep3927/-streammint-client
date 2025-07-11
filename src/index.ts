@@ -1,16 +1,26 @@
-import { StreamClient } from "./client/index";
+// Main client
+export { StreamClient } from "./client/index";
 
-const client = new StreamClient({
-  url: "http://127.0.0.1:8000",
-  secretID: "tokens:daiwg7ymz2r113ifqlie",
-  secretKey: "cedqnr1VXoblNtK631hKG4E1qMkEBPEJR11JOlhGXJTXaMPAJS",
-});
+// Individual services for advanced usage
+export { AuthService } from "./services/auth.service";
+export { ProjectService } from "./services/project.service";
+export { MessageService } from "./services/message.service";
+export { FileService } from "./services/file.service";
+export { PulseService } from "./services/pulse.service";
+export { default as UserService } from "./services/user.service";
+export { default as ChannelService } from "./services/channel.service";
+export { default as ParticipantService } from "./services/participant.service";
+export { CryptoService } from "./services/crypto.service";
+export { default as BaseService } from "./services/service";
 
-client.users
-  .getUsers()
-  .then((users) => {
-    console.log("Users:", users.toArray());
-  })
-  .catch((error) => {
-    console.error("Error fetching users:", error);
-  });
+// Types
+export type * from "./types/main";
+export type * from "./types/user.type";
+export type * from "./types/message.type";
+export type * from "./types/channel.type";
+export type * from "./types/file.type";
+export type * from "./types/pulse.type";
+export type * from "./types/events.type";
+
+// Utility functions
+export { getWebSocketFromHttpUrl } from "./lib/utils";

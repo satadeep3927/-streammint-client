@@ -18,6 +18,7 @@ export class StreamClient extends EventEmitter {
   public messages: MessageService;
   public pulse: PulseService;
   public isReady: boolean = false;
+  private userId?: string;
 
   constructor({
     url,
@@ -47,14 +48,26 @@ export class StreamClient extends EventEmitter {
       this.secretKey,
       this.pulse
     );
-
     this.messages = new MessageService(
       this.url,
       this.secretID,
       this.secretKey,
       this.pulse
     );
-    this.connect();
+    
+    // Only auto-connect if enabled
+    if (this.autoConnect) {
+      this.connect().catch(() => {
+        // Silently ignore connection failures in constructor
+        // The connection will be retried based on reconnect settings
+      });
+    }
+  }
+  /**
+   * Login with a userId for presence/typing events. Must be called before connect().
+   */
+  public login(userId: string): void {
+    this.userId = userId;
   }
 
   /**
@@ -252,9 +265,12 @@ export class StreamClient extends EventEmitter {
     this.pulse.onEvent("file_delete", handler);
   }
 
-  private async connect() {
+  public async connect() {
+    if (!this.userId) {
+      throw new Error("User ID must be set before connecting");
+    }
     try {
-      await this.pulse.connect();
+      await this.pulse.connect(this.userId);
 
       this.isReady = true;
 

@@ -30,6 +30,7 @@ export class PulseService extends BaseService {
   private listeners: Set<PulseEventListener> = new Set();
   private ws: WebSocket | null = null;
   private connectionPromise: Promise<void> | null = null;
+  private userId?: string;
 
   /**
    * Type-safe event handler registration for known event types
@@ -41,6 +42,12 @@ export class PulseService extends BaseService {
     this.on(eventType, (event) => handler(event as any));
   }
 
+  /**
+   * @param baseURL - API base URL
+   * @param secretID - Project secret ID
+   * @param secretKey - Project secret key
+   * @param userId - (Optional) User ID to include in all events
+   */
   constructor(baseURL: string, secretID: string, secretKey: string) {
     super(baseURL, secretID, secretKey);
     this.clientID = uuid();
@@ -55,7 +62,7 @@ export class PulseService extends BaseService {
    * Ensures WebSocket connection is established
    * @returns Promise that resolves when connected
    */
-  private async ensureConnection(): Promise<void> {
+  private async ensureConnection(userId: string): Promise<void> {
     if (this.ws?.readyState === WebSocket.OPEN) {
       return Promise.resolve();
     }
@@ -64,11 +71,12 @@ export class PulseService extends BaseService {
       return this.connectionPromise;
     }
 
-    this.connectionPromise = this.connect();
+    this.connectionPromise = this.connect(userId);
     return this.connectionPromise;
   }
 
-  public async connect(): Promise<void> {
+  public async connect(userId: string): Promise<void> {
+    this.userId = userId;
     return new Promise((resolve, reject) => {
       this.ws = new WebSocket(this.uri);
 
@@ -115,11 +123,12 @@ export class PulseService extends BaseService {
     event: string,
     data: Record<string, any> = {}
   ): Promise<void> {
-    await this.ensureConnection();
+    await this.ensureConnection(this.userId!);
 
+    // Always include userId if set
     const payload = {
       event_type: event,
-      data,
+      data: this.userId ? { ...data, userId: this.userId } : data,
       sender_id: this.clientID,
     };
 
