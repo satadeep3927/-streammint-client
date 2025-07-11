@@ -1,6 +1,6 @@
 {
-  "name": "streammint-client",
-  "version": "1.0.0",
+  "name": "@streammint/client",
+  "version": "1.0.1",
   "description": "A comprehensive TypeScript client library for StreamMint Server with real-time messaging, file management, and WebSocket support",
   "keywords": [
     "typescript",
