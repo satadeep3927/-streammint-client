@@ -17,6 +17,7 @@ export interface ProjectData {
 export interface TokenData {
   name: string;
   extra?: Record<string, any>;
+  expires: null | string; // ISO date string or null for no expiry
 }
 
 /**
@@ -89,7 +90,10 @@ export class ProjectService extends BaseService {
    * @param data - Updated project data
    * @returns Promise resolving to the updated project
    */
-  public async updateProject(projectId: string, data: Partial<ProjectData>): Promise<Project> {
+  public async updateProject(
+    projectId: string,
+    data: Partial<ProjectData>
+  ): Promise<Project> {
     const response = await this.put(`/v1/project/${projectId}`, data);
     return response.data.data;
   }
@@ -109,7 +113,10 @@ export class ProjectService extends BaseService {
    * @param data - Token data
    * @returns Promise resolving to the created token
    */
-  public async createToken(projectId: string, data: TokenData): Promise<ProjectToken> {
+  public async createToken(
+    projectId: string,
+    data: TokenData
+  ): Promise<ProjectToken> {
     const response = await this.post(`/v1/project/${projectId}/tokens`, data);
     return response.data.data;
   }
@@ -119,7 +126,9 @@ export class ProjectService extends BaseService {
    * @param projectId - Project ID
    * @returns Promise resolving to array of tokens
    */
-  public async getTokens(projectId: string): Promise<IEnumerable<ProjectToken>> {
+  public async getTokens(
+    projectId: string
+  ): Promise<IEnumerable<ProjectToken>> {
     const response = await this.get(`/v1/project/${projectId}/tokens`);
     return from(response.data.data);
   }
