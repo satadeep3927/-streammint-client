@@ -72,10 +72,7 @@ export default class BaseService {
     const tokenString = `${encodedHeader}.${encodedPayload}`;
 
     // Sign the token
-    const signature = CryptoService.hmacSha256(secretKey, tokenString);
-
-    // Encode the signature
-    const encodedSignature = CryptoService.base64UrlEncode(signature);
+    const encodedSignature = CryptoService.hmacSha256(secretKey, tokenString);
 
     // Return the complete JWT
     return `${tokenString}.${encodedSignature}`;
